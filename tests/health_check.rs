@@ -66,7 +66,6 @@ async fn subscibe_returns_a_400_when_data_is_missing() {
 
     for (invalid_body, error_message) in test_cases {
         // Act
-        let body = "name=Oskar&20Wiszowaty&email=ppwiszu%40gmail.com";
         let response = client
             .post(&format!("{}/subscriptions", &app_address))
             .header("Content-Type", "application/x-www-form-urlencoded")

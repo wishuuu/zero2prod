@@ -11,11 +11,25 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SQLX_VERSION: 0.8.0
+  SQLX_FEATURES: "rustls,postgres"
+  APP_USER: app
+  APP_USER_PWD: secret
+  APP_DB_NAME: newsletter
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          PASTGRES_DB: postgres
+        ports:
+          - 5432:5432
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -23,8 +37,31 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli
+          --version=${{ env.SQLX_VERSION }}
+          --features ${{ env.SQLX_FEATURES }}
+          --no-default-features
+          --locked
+
+      - name: Create app user in Postgres
+        run: |
+          sudo apt-get install postgresql-client
+
+          CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
+          PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
+
+          GRANT_QUERY="ALTER USER ${APP_USER} CREATEDB;"
+          PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${GRANT_QUERY}"
+
+      - name: Migrate database
+        run: SKIP_DOCKER=true ./scripts/init_db.sh
+
       - name: Run tests
         run: cargo test
+
+      - name: Check that queries are fresh
+        run: carg sqlx prepare --workspace --check -- --all-targets
 
   rustfmt:
     name: Rustfmt
@@ -59,6 +96,16 @@ jobs:
   coverage:
     name: Test coverage
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          PASTGRES_DB: postgres
+        ports:
+          - 5432:5432
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -68,7 +115,27 @@ jobs:
         with:
           components: llvm-tools-preview
 
-      - name: Install cargo-llvm-preview
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli
+          --version=${{ env.SQLX_VERSION }}
+          --features ${{ env.SQLX_FEATURES }}
+          --no-default-features
+          --locked
+
+      - name: Create app user in Postgres
+        run: |
+          sudo apt-get install postgresql-client
+
+          CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
+          PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
+
+          GRANT_QUERY="ALTER USER ${APP_USER} CREATEDB;"
+          PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${GRANT_QUERY}"
+
+      - name: Migrate database
+        run: SKIP_DOCKER=true ./scripts/init_db.sh
+
+      - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Generate code coverage

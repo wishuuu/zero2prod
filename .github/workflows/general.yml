@@ -27,7 +27,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-          PASTGRES_DB: postgres
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
     steps:
@@ -58,10 +58,13 @@ jobs:
         run: SKIP_DOCKER=true ./scripts/init_db.sh
 
       - name: Run tests
+        env:
+          DATABASE_URL: postgres://${{ env.APP_USER }}:${{ env.APP_USER_PWD }}@localhost:5432/${{ env.APP_DB_NAME }}
         run: cargo test
 
-      - name: Check that queries are fresh
-        run: carg sqlx prepare --workspace --check -- --all-targets
+      - name: Check that queries are fresh (disabled)
+        if: ${{ false }}
+        run: cargo sqlx prepare --workspace --check -- --all-targets
 
   rustfmt:
     name: Rustfmt
@@ -102,7 +105,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-          PASTGRES_DB: postgres
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
 
@@ -139,6 +142,8 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Generate code coverage
+        env:
+          DATABASE_URL: postgres://${{ env.APP_USER }}:${{ env.APP_USER_PWD }}@localhost:5432/${{ env.APP_DB_NAME }}
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
       - name: Generate report

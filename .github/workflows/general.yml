@@ -84,6 +84,8 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    env: 
+      SQLX_OFFLINE: true
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

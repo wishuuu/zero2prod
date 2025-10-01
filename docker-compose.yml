@@ -31,7 +31,22 @@ services:
       APP_ENVIRONMENT: production
     ports:
       - "8000:8000"
+    volumes:
+      - ${HOME}/zero2prod/configuration:/app/configuration:ro
+    labels:
+      - "traefik.http.routers.zero2prod.rule=Host(`zero2prod.wiszowaty.xyz`)"
+      - "traefik.http.services.zero2prod.loadbalancer.server.port=8000"
+      - "traefik.http.routers.zero2prod.entrypoints=websecure"
+      - "traefik.http.routers.zero2prod.tls=true"
+      - "traefik.http.routers.zero2prod.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefic_network"
+    networks:
+      - default
+      - traefic_network
 
 volumes:
   db_data:
 
+networks:
+  traefic_network:
+    external: true

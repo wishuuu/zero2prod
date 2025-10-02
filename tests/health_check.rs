@@ -150,3 +150,37 @@ async fn subscibe_returns_a_400_when_data_is_missing() {
         )
     }
 }
+
+#[tokio::test]
+async fn subscibe_returns_a_400_when_fields_are_present_but_invalid() {
+    // Arrange
+    let test_app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=&email=ppwiszu%40gmail.com", "empty name"),
+        ("name=Oskar%20Wiszowaty&email=", "empty email"),
+        (
+            "name=Oskar%20Wiszowaty&email=this-is-not-an-email",
+            "invalid email",
+        ),
+    ];
+
+    for (invalid_body, error_message) in test_cases {
+        // Act
+        let response = client
+            .post(&format!("{}/subscriptions", &test_app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+
+        // Assert
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        )
+    }
+}
